@@ -34,6 +34,12 @@
                 <button id="liveBtn">Go live (camera)</button>
             </div>
 
+            <div class="feed-meta" id="feedMeta">
+                <span class="feed-meta-item"><span class="feed-meta-label">Source</span><span id="feedSourceLabel">none loaded</span></span>
+                <span class="feed-meta-item"><span class="feed-meta-label">Mode</span><span id="feedModeLabel">idle</span></span>
+                <span class="feed-meta-item"><span class="feed-meta-label">Engine</span><span>YOLOv11 &middot; OSNet &middot; ArcFace</span></span>
+            </div>
+
             <div class="video-frame is-empty" id="videoFrame">
                 <span class="hud-corner tl"></span>
                 <span class="hud-corner tr"></span>
@@ -64,6 +70,59 @@
                     <div class="label">Active alerts</div>
                     <div class="value" id="statAlerts">0</div>
                 </div>
+                <div class="stat-cell">
+                    <div class="label">Known identities</div>
+                    <div class="value" id="statIdentities">0</div>
+                </div>
+            </div>
+
+            <div class="log-panel">
+                <div class="log-panel-head">
+                    <h3>Event log</h3>
+                    <span class="log-count" id="logCount">0 events</span>
+                </div>
+                <div class="log-table-wrap">
+                    <table class="log-table">
+                        <thead>
+                            <tr>
+                                <th>Time</th>
+                                <th>Track</th>
+                                <th>Person</th>
+                                <th>Event</th>
+                                <th>Confidence</th>
+                            </tr>
+                        </thead>
+                        <tbody id="logTableBody">
+                            <tr class="log-empty-row"><td colspan="5">No events recorded yet &mdash; load footage or go live to begin logging.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="bottom-split">
+                <div class="split-panel">
+                    <div class="split-panel-head">
+                        <div class="section-head roster">
+                            <span class="tag"></span>
+                            <h3>IDENTITY ROSTER</h3>
+                        </div>
+                    </div>
+                    <div id="rosterBox" class="roster-container split-scroll">
+                        <p class="empty-note">No identities recorded yet.</p>
+                    </div>
+                </div>
+
+                <div class="split-panel">
+                    <div class="split-panel-head">
+                        <div class="section-head alerts">
+                            <span class="tag"></span>
+                            <h3>THREAT ALERTS</h3>
+                        </div>
+                    </div>
+                    <div id="alertBox" class="alert-container split-scroll">
+                        <p class="no-alerts">No threats matching active rules.</p>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -86,6 +145,19 @@
                 </div>
                 <button id="targetUploadBtn" class="btn-primary" style="width:100%; margin-top:10px;">Set as target</button>
                 <div id="targetStatus">No target selected</div>
+                <div id="targetConfidence" class="confidence-line"></div>
+                <div id="caseStatusLine" class="case-status-line" style="display:none;"></div>
+                <button id="closeCaseBtn" class="btn-danger" style="width:100%; margin-top:10px; display:none;">Close case &amp; generate report</button>
+            </div>
+
+            <div class="side-section">
+                <div class="section-head reports">
+                    <span class="tag"></span>
+                    <h3>CASE REPORTS</h3>
+                </div>
+                <div id="reportsBox" class="reports-container">
+                    <p class="empty-note">No cases closed yet.</p>
+                </div>
             </div>
 
             <div class="side-section">
@@ -140,16 +212,6 @@
                     </label>
                 </div>
                 <button id="updateRulesBtn" class="btn-primary" style="width:100%;">Apply alert rules</button>
-            </div>
-
-            <div class="side-section">
-                <div class="section-head alerts">
-                    <span class="tag"></span>
-                    <h3>THREAT ALERTS</h3>
-                </div>
-                <div id="alertBox" class="alert-container">
-                    <p class="no-alerts">No threats matching active rules.</p>
-                </div>
             </div>
 
         </div>
