@@ -1,0 +1,9 @@
+venv311/
+env/
+venv/
+.venv/
+__pycache__/
+*.pyc
+.env
+uploads/*
+.vscode/

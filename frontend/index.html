@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <title>Sentry &mdash; Person Identification Console</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div class="topbar">
+        <div class="topbar-id">
+            <span class="mark"></span>
+            <h1>SENTRY</h1>
+            <span class="subtitle">multi-camera identification &amp; re-ID console</span>
+        </div>
+        <div class="topbar-status">
+            <span><span class="status-dot" id="connDot"></span><span id="connLabel">checking link&hellip;</span></span>
+            <span id="clock">--:--:--</span>
+        </div>
+    </div>
+
+    <div class="dashboard">
+
+        <!-- Main feed -->
+        <div class="panel main-panel">
+            <div class="controls">
+                <label class="file-btn">
+                    <input type="file" id="videoInput" accept="video/*">
+                    <button type="button" tabindex="-1">Choose footage</button>
+                </label>
+                <span class="file-name" id="videoFileName">no file selected</span>
+                <button id="uploadBtn" class="btn-primary">Load into stream</button>
+                <button id="liveBtn">Go live (camera)</button>
+            </div>
+
+            <div class="video-frame is-empty" id="videoFrame">
+                <span class="hud-corner tl"></span>
+                <span class="hud-corner tr"></span>
+                <span class="hud-corner bl"></span>
+                <span class="hud-corner br"></span>
+                <span class="hud-tag"><span class="status-dot live"></span>FEED</span>
+                <img id="streamViewer" alt="CCTV stream">
+                <div class="hud-empty">
+                    <span>NO SIGNAL</span>
+                    <span>Load footage or start the live camera to begin</span>
+                </div>
+                <div class="stream-loading">
+                    <span class="spinner"></span>
+                    <span id="loadingLabel">Connecting to feed&hellip;</span>
+                </div>
+            </div>
+
+            <div class="stat-strip">
+                <div class="stat-cell">
+                    <div class="label">Target lock</div>
+                    <div class="value" id="statTarget">none</div>
+                </div>
+                <div class="stat-cell">
+                    <div class="label">Target sightings</div>
+                    <div class="value" id="statMatches">0</div>
+                </div>
+                <div class="stat-cell">
+                    <div class="label">Active alerts</div>
+                    <div class="value" id="statAlerts">0</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="panel side-panel">
+
+            <div class="side-section">
+                <div class="section-head lock">
+                    <span class="tag"></span>
+                    <h3>TARGET LOCK</h3>
+                </div>
+                <div class="target-box">
+                    <div class="target-thumb" id="targetThumb">NO IMG</div>
+                    <div class="target-fields">
+                        <label class="file-btn" style="width:100%;">
+                            <input type="file" id="targetImageInput" accept="image/*">
+                            <button type="button" tabindex="-1" style="width:100%;">Select reference photo</button>
+                        </label>
+                    </div>
+                </div>
+                <button id="targetUploadBtn" class="btn-primary" style="width:100%; margin-top:10px;">Set as target</button>
+                <div id="targetStatus">No target selected</div>
+            </div>
+
+            <div class="side-section">
+                <div class="section-head search">
+                    <span class="tag"></span>
+                    <h3>ATTRIBUTE SEARCH</h3>
+                </div>
+                <div class="search-row">
+                    <input type="text" id="searchInput" placeholder="e.g. white shirt, black mask">
+                    <button id="searchBtn">Search</button>
+                </div>
+                <div id="searchResults" class="results-container"></div>
+            </div>
+
+            <div class="side-section">
+                <div class="section-head rules">
+                    <span class="tag"></span>
+                    <h3>BLACKLIST RULES</h3>
+                </div>
+                <div class="rule-list">
+                    <label class="rule-row">
+                        Face mask
+                        <span class="switch">
+                            <input type="checkbox" id="chkMask" checked>
+                            <span class="track"></span>
+                            <span class="thumb"></span>
+                        </span>
+                    </label>
+                    <label class="rule-row">
+                        Visible tattoo
+                        <span class="switch">
+                            <input type="checkbox" id="chkTattoo">
+                            <span class="track"></span>
+                            <span class="thumb"></span>
+                        </span>
+                    </label>
+                    <label class="rule-row">
+                        Carried bag
+                        <span class="switch">
+                            <input type="checkbox" id="chkBag">
+                            <span class="track"></span>
+                            <span class="thumb"></span>
+                        </span>
+                    </label>
+                    <label class="rule-row">
+                        Glasses
+                        <span class="switch">
+                            <input type="checkbox" id="chkGlasses">
+                            <span class="track"></span>
+                            <span class="thumb"></span>
+                        </span>
+                    </label>
+                </div>
+                <button id="updateRulesBtn" class="btn-primary" style="width:100%;">Apply alert rules</button>
+            </div>
+
+            <div class="side-section">
+                <div class="section-head alerts">
+                    <span class="tag"></span>
+                    <h3>THREAT ALERTS</h3>
+                </div>
+                <div id="alertBox" class="alert-container">
+                    <p class="no-alerts">No threats matching active rules.</p>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script src="main.js"></script>
+</body>
+</html>
