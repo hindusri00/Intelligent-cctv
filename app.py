@@ -108,6 +108,9 @@ def set_target():
     # Try the full reference photo for a face first (most target photos are
     # framed with the face visible even if it's not strictly a headshot).
     face_embedding = reference_tracker.face.extract_embedding(image)
+    print(
+    f"[TARGET EXTRACT] body={body_embedding is not None}, face={face_embedding is not None}",
+    flush=True)
 
     if body_embedding is None and face_embedding is None:
         return jsonify({"error": "Could not extract target features (no usable body or face found)"}), 400

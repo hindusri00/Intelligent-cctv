@@ -97,7 +97,9 @@ class RealTimeTracker:
         active_targets = []
 
         for track in tracks:
+            print(f"[TRACK STATE] id={track.track_id}, confirmed={track.is_confirmed()}, age={track.age}, hits={track.hits}", flush=True)
             if not track.is_confirmed():
+                print(f"[UNCONFIRMED TRACK] {track.track_id}", flush=True)
                 continue
 
             track_id = track.track_id
@@ -130,25 +132,34 @@ class RealTimeTracker:
                     )
                 )
             attr = self.attribute_cache[track_id]
-
+            print(f"[TARGET EMBEDDINGS] body={self.target_embedding is not None}, face={self.target_face_embedding is not None}",flush=True)
             # --- Identity resolution ---
             if self.target_embedding is not None or self.target_face_embedding is not None:
                 # Target-lock mode: score this track against the ONE known
                 # target using the same fused face+body scoring the open-set
                 # resolver uses, rather than a separate ad-hoc rule.
+                print(f"[TRACK CHECK] Track {track_id} frame {self.frame_count}", flush=True)
                 if track_id not in self.target_cache or self.frame_count % 15 == 0:
+                    print(f"[TARGET CHECK] Track {track_id} frame {self.frame_count}", flush=True)
                     body_embedding = self.reid.extract_embedding(person_crop)
                     combined, face_sim, body_sim = self.resolver.score_pair(
                         face_embedding, body_embedding,
                         self.target_face_embedding, self.target_embedding,
                     )
                     self.target_cache[track_id] = {
-                        "is_target": combined is not None and combined >= self.target_similarity_threshold,
+                        "is_target": (
+                            combined is not None
+                            and combined >= self.target_similarity_threshold
+                            and (
+                                self.target_face_embedding is None
+                                or face_sim is not None
+                            )
+                        ),
                         "confidence": combined or 0.0,
                         "face_similarity": face_sim,
                         "body_similarity": body_sim,
                     }
-
+                    print(f"[TARGET SCORE] Track {track_id}: combined={combined:.3f} face={face_sim} body={body_sim}", flush=True)
                 target_result = self.target_cache[track_id]
 
                 # Ignore everyone who does not match the target
