@@ -63,6 +63,10 @@ function setFrameState(state) {
 }
 
 function startStream(url, loadingLabel) {
+    const processedVideo = document.getElementById('processedVideo');
+    processedVideo.pause();
+    processedVideo.style.display = 'none';
+    streamViewer.style.display = 'block';
     document.getElementById('loadingLabel').textContent = loadingLabel || 'Connecting to feed\u2026';
     setFrameState('loading');
     streamViewer.src = url;
@@ -287,6 +291,82 @@ document.getElementById('uploadBtn').addEventListener('click', async () => {
         setConn(false);
     }
 });
+
+document.getElementById('processVideoBtn').addEventListener('click', async () => {
+    if (!currentVideoPath) {
+        showToast('Load a video first.');
+        return;
+    }
+
+    const processBtn = document.getElementById('processVideoBtn');
+    processBtn.disabled = true;
+    processBtn.textContent = 'Processing...';
+    showToast('Processing video. Please wait...');
+
+    try {
+        const res = await fetch(`${API_BASE}/process-video`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                video_path: currentVideoPath
+            })
+        });
+
+        const data = await res.json();
+
+        if (!res.ok || data.status !== 'success') {
+            showToast(data.error || 'Video processing failed.');
+            return;
+        }
+
+        showToast(`Processed ${data.frames_processed} frames successfully.`);
+        
+        const processedVideo = document.getElementById('processedVideo');
+
+        streamViewer.style.display = 'none';
+        processedVideo.style.display = 'block';
+
+        processedVideo.src = `${window.location.origin}${data.processed_video_url}`;
+        processedVideo.load();
+        
+        processedVideo.onerror = () => {
+            console.error('Video error:', processedVideo.error);
+            showToast('Video failed to load. Check the video URL or codec.');
+        };
+
+        processedVideo.onloadedmetadata = () => {
+            console.log('Video metadata loaded:', {
+                duration: processedVideo.duration,
+                width: processedVideo.videoWidth,
+                height: processedVideo.videoHeight
+            });
+
+            processedVideo.play().catch(() => {
+                showToast('Video ready. Press Play to start.');
+            });
+        };
+
+        processedVideo.src = `${window.location.origin}${data.processed_video_url}`;
+        console.log('Trying video URL:', processedVideo.src);
+        processedVideo.load();
+
+        processedVideo.onloadedmetadata = () => {
+            processedVideo.play().catch(() => {
+                showToast('Video ready. Press Play to start.');
+            });
+        };
+
+    } catch (error) {
+        console.error('Video processing error:', error);
+        showToast('Could not connect to the processing server.');
+    } finally {
+        processBtn.disabled = false;
+        processBtn.textContent = 'Process & Save Video';
+    }
+});
+
 
 // ---------- Live camera ----------
 document.getElementById('liveBtn').addEventListener('click', () => {

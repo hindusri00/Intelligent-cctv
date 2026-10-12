@@ -14,8 +14,11 @@ CORS(app)
 
 app.config['UPLOAD_FOLDER'] = 'uploads'
 app.config['EVIDENCE_FOLDER'] = 'evidence'
+app.config['PROCESSED_VIDEO_FOLDER'] = 'processed_videos'
+
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 os.makedirs(app.config['EVIDENCE_FOLDER'], exist_ok=True)
+os.makedirs(app.config['PROCESSED_VIDEO_FOLDER'], exist_ok=True)
 
 db = Database(db_path="sentry.db")
 
@@ -360,6 +363,167 @@ def upload_video():
     file_path = os.path.join(app.config['UPLOAD_FOLDER'], file.filename)
     file.save(file_path)
     return jsonify({"status": "success", "video_path": file_path})
+
+@app.route('/api/process-video', methods=['POST'])
+def process_video():
+    """Process uploaded footage and save the annotated output as a video."""
+    data = request.get_json(silent=True) or {}
+    video_path = data.get("video_path")
+
+    if not video_path:
+        return jsonify({"error": "Missing video_path"}), 400
+
+    # Only process videos inside the configured upload folder.
+    upload_root = os.path.abspath(app.config["UPLOAD_FOLDER"])
+    source_path = os.path.abspath(video_path)
+
+    if os.path.commonpath([upload_root, source_path]) != upload_root:
+        return jsonify({"error": "Invalid video path"}), 400
+
+    if not os.path.isfile(source_path):
+        return jsonify({"error": "Uploaded video not found"}), 404
+
+    cap = cv2.VideoCapture(source_path)
+    if not cap.isOpened():
+        cap.release()
+        return jsonify({"error": "Could not open uploaded video"}), 400
+
+    fps = cap.get(cv2.CAP_PROP_FPS)
+    if not fps or fps <= 0:
+        fps = 25.0
+
+    width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+
+    
+    output_name = f"processed_{uuid.uuid4().hex}.mp4"
+    output_path = os.path.join(
+        app.config["PROCESSED_VIDEO_FOLDER"], output_name
+    )
+
+    temp_name = f"temp_{uuid.uuid4().hex}.avi"
+    temp_path = os.path.join(
+        app.config["PROCESSED_VIDEO_FOLDER"], temp_name
+    )
+
+    writer = cv2.VideoWriter(
+        temp_path,
+        cv2.VideoWriter_fourcc(*"MJPG"),
+        fps,
+        (width, height),
+    )
+
+
+    if not writer.isOpened():
+        cap.release()
+        return jsonify({"error": "Could not create processed video"}), 500
+
+    camera_id = f"processed-{uuid.uuid4().hex[:8]}"
+    tracker_system = get_tracker(camera_id)
+    frame_count = 0
+    success = False
+
+    try:
+        while True:
+            ret, frame = cap.read()
+            if not ret:
+                break
+
+            frame_count += 1
+            timestamp_sec = round(frame_count / fps, 2)
+            annotated_frame, targets = tracker_system.process_frame(frame)
+
+            for target in targets:
+                target.pop("face_embedding", None)
+
+                snapshot_path = None
+                if frame_count % max(int(fps), 1) == 0:
+                    snapshot_path = _save_evidence_snapshot(
+                        frame, target, camera_id
+                    )
+
+                db.log_detection(
+                    person_id=target["person_id"],
+                    track_id=target["track_id"],
+                    camera_id=camera_id,
+                    attributes=target,
+                    video_source=source_path,
+                    video_timestamp=timestamp_sec,
+                    reid_similarity=target.get("body_similarity"),
+                    face_similarity=target.get("face_similarity"),
+                    attribute_score=target.get("attribute_score"),
+                    fused_confidence=target.get("confidence"),
+                    has_face=target.get("has_face", False),
+                    snapshot_path=snapshot_path,
+                )
+
+            # The tracker must preserve the original frame dimensions.
+            if annotated_frame.shape[1] != width or annotated_frame.shape[0] != height:
+                annotated_frame = cv2.resize(annotated_frame, (width, height))
+
+            writer.write(annotated_frame)
+
+        success = frame_count > 0
+        writer.release()
+        if success:
+            import subprocess
+            import imageio_ffmpeg
+
+            ffmpeg_exe = imageio_ffmpeg.get_ffmpeg_exe()
+
+            result = subprocess.run(
+                [
+                    ffmpeg_exe,
+                    "-y",
+                    "-i", temp_path,
+                    "-c:v", "libx264",
+                    "-pix_fmt", "yuv420p",
+                    "-movflags", "+faststart",
+                    output_path,
+                ],
+                capture_output=True,
+                text=True,
+            )
+
+            if result.returncode != 0:
+                app.logger.error("FFmpeg conversion failed: %s", result.stderr)
+                success = False
+
+        if os.path.exists(temp_path):
+            os.remove(temp_path)
+
+    except Exception:
+        app.logger.exception("Processed-video generation failed")
+        return jsonify({"error": "Video processing failed; check the server log"}), 500
+
+    finally:
+        cap.release()
+        writer.release()
+        trackers.pop(camera_id, None)
+
+        if current_case is not None:
+            db.close_case_source(current_case["case_id"], camera_id)
+
+    if not success:
+        if os.path.exists(output_path):
+            os.remove(output_path)
+        return jsonify({"error": "No frames were processed"}), 500
+
+    return jsonify({
+        "status": "success",
+        "processed_video_url": f"/api/processed-videos/{output_name}",
+        "frames_processed": frame_count,
+        "fps": fps,
+    })
+
+
+@app.route('/api/processed-videos/<path:filename>', methods=['GET'])
+def serve_processed_video(filename):
+    return send_from_directory(
+        app.config["PROCESSED_VIDEO_FOLDER"],
+        filename,
+        as_attachment=False,
+    )
 
 @app.route('/api/stream')
 def video_stream():

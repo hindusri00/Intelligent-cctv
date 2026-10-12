@@ -7,3 +7,17 @@ __pycache__/
 .env
 uploads/*
 .vscode/
+# Generated processed videos
+processed_videos/*
+!processed_videos/.gitkeep
+
+# Generated evidence
+evidence/*
+!evidence/.gitkeep
+
+# Generated reports
+reports/cases/*
+!reports/cases/.gitkeep
+
+# Generated video tests
+test_*.mp4
