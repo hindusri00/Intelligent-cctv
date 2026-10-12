@@ -31,6 +31,7 @@
                 </label>
                 <span class="file-name" id="videoFileName">no file selected</span>
                 <button id="uploadBtn" class="btn-primary">Load into stream</button>
+                <button id="processVideoBtn" class="btn-primary">Process & Save Video</button>
                 <button id="liveBtn">Go live (camera)</button>
             </div>
 
@@ -47,6 +48,17 @@
                 <span class="hud-corner br"></span>
                 <span class="hud-tag"><span class="status-dot live"></span>FEED</span>
                 <img id="streamViewer" alt="CCTV stream">
+                
+                <video
+                    id="processedVideo"
+                    controls
+                    playsinline
+                    preload="metadata"
+                    style="display: none; width: 100%; height: 100%; object-fit: contain;"
+                >
+                    Your browser does not support video playback.
+                </video>
+
                 <div class="hud-empty">
                     <span>NO SIGNAL</span>
                     <span>Load footage or start the live camera to begin</span>
